@@ -1,69 +1,59 @@
 name: Deploy and Update Sitemap
 
 on:
-  workflow_call:
+  workflow_call: # Makes this workflow reusable
     inputs:
       site_url:
         description: "The base URL of the website"
         required: true
         type: string
-       publish_branch:
+      publish_branch:
         description: "The branch to publish GitHub Pages"
         required: false
         default: gh-pages
+        type: string
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Install dependencies
       - name: Install dependencies
         run: npm ci
 
-      # Step 3: Lint JavaScript
       - name: Lint JavaScript
         run: npm run lint
 
-      # Step 4: Generate the sitemap
       - name: Generate sitemap
         run: node generate-sitemap.mjs
 
-      # Step 5: Check Sitemap Generation
       - name: Check Sitemap Generation
         run: |
           if [ ! -f ./sitemap.xml ]; then
             echo "Sitemap generation failed!" && exit 1
           fi
 
-      # Step 6: Validate Sitemap Content
       - name: Validate Sitemap
         run: |
           if ! grep -q "<url>" ./sitemap.xml; then
             echo "Sitemap does not contain valid URLs!" && exit 1
           fi
 
-      # Step 7: Minify JavaScript
       - name: Minify JavaScript
         run: npm run build:js
 
-      # Step 8: Minify CSS
       - name: Minify CSS
         run: npm run build:css
 
-      # Step 9: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./ # Ensure sitemap.xml is included
+          publish_dir: ./
           publish_branch: ${{ inputs.publish_branch }}
 
-      # Step 10: Validate HTML
       - name: Validate HTML
         run: |
           curl -s -H "Content-Type: text/html; charset=utf-8" \
